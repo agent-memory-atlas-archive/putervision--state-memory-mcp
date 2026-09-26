@@ -82,7 +82,7 @@ export class QueryEngine {
       const queryParams: any[] = [projectSlug];
 
       const branch = params.git_branch !== undefined ? params.git_branch : getCurrentBranch();
-      if (branch !== '*') {
+      if (branch && branch !== '*') {
         whereClause += ' AND git_branch = ?';
         queryParams.push(branch);
       }
@@ -221,7 +221,7 @@ export class QueryEngine {
         const queryParams: any[] = [projectSlug];
 
         const branch = params.git_branch !== undefined ? params.git_branch : getCurrentBranch();
-        if (branch !== '*') {
+        if (branch && branch !== '*') {
           sql += ' AND git_branch = ?';
           queryParams.push(branch);
         }
@@ -312,7 +312,7 @@ export class QueryEngine {
         queryParams.push(projectSlug);
 
         const branch = params.git_branch !== undefined ? params.git_branch : getCurrentBranch();
-        if (branch !== '*') {
+        if (branch && branch !== '*') {
           sql += ' AND n.git_branch = ?';
           queryParams.push(branch);
         }
