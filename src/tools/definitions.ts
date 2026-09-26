@@ -28,6 +28,7 @@ export const READ_ONLY_ACTIONS = new Set([
   'query_graph:trace',
   'query_graph:raw',
   'query_graph:natural_language',
+  'query_graph:compact_slice',
   'get_analytics:summary',
   'get_analytics:velocity',
   'get_analytics:burndown',
@@ -527,13 +528,13 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'query_graph',
     description:
-      'Query graph topology, neighborhoods, dependency paths, and safe read-only SQL queries. Supported actions: subgraph (fetch N-hop neighborhood around root node), trace (trace dependency chain upstream or downstream with cycle detection), raw (execute safe read-only SELECT query against SQLite), natural_language (translate natural language query into graph operations).',
+      'Query graph topology, neighborhoods, dependency paths, safe read-only SQL queries, and compact System One task slices. Supported actions: subgraph (fetch N-hop neighborhood around root node), trace (trace dependency chain upstream or downstream with cycle detection), raw (execute safe read-only SELECT query against SQLite), natural_language (translate natural language query into graph operations), compact_slice (fast System One decision slice).',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['subgraph', 'trace', 'raw', 'natural_language'],
+          enum: ['subgraph', 'trace', 'raw', 'natural_language', 'compact_slice'],
           description: 'The graph query action to execute.',
         },
         root_id: { type: 'string', description: 'Root node ID for subgraph query.' },

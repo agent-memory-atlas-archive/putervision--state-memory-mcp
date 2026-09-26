@@ -106,7 +106,7 @@ export class SynergyEngine {
     const db = getDb(projectSlug);
 
     // Fetch state memory events
-    let query = `SELECT id, event_type, entity_type, entity_id, before_state, after_state, timestamp, session_id FROM events WHERE project = ?`;
+    let query = `SELECT id, event_type, entity_type, entity_id, before_state, after_state, timestamp, session_id, metadata FROM events WHERE project = ?`;
     const queryParams: any[] = [projectSlug];
 
     if (sessionId) {
@@ -158,17 +158,56 @@ export class SynergyEngine {
         // Ignore JSON parse errors on after_state
       }
 
-      steps.push({
+      const stepItem: any = {
+        step: 0,
         step_index: 0,
         timestamp: new Date(ev.timestamp).getTime() || Date.now(),
         iso_timestamp: ev.timestamp,
+        trace_id: ev.session_id || sessionId || '',
         source: 'state_memory',
         session_id: ev.session_id || sessionId || '',
         event_type: ev.event_type,
         entity_type: ev.entity_type,
         entity_id: ev.entity_id,
         after_state: afterState,
-      });
+      };
+
+      if ((afterState as any)?.metadata?.task_id) {
+        stepItem.task_id = (afterState as any).metadata.task_id;
+      } else if (ev.entity_type === 'node' && (afterState as any)?.type === 'task') {
+        stepItem.task_id = ev.entity_id;
+      }
+
+      if ((afterState as any)?.metadata?.visual_state_id) {
+        stepItem.visual_state_id = (afterState as any).metadata.visual_state_id;
+      }
+
+      if (
+        ev.event_type === 'fast_decision' ||
+        ev.entity_type === 'decision' ||
+        (afterState as any)?.type === 'decision'
+      ) {
+        let meta: any = {};
+        try {
+          meta = JSON.parse(ev.metadata || '{}');
+        } catch {}
+        stepItem.decision = {
+          action:
+            (afterState as any)?.title ||
+            (afterState as any)?.action ||
+            meta?.action ||
+            'unknown',
+          tier: meta?.reasoning_tier || meta?.tier || 'L1',
+          confidence: meta?.confidence ?? (meta?.significance ?? 1.0),
+          pack_hash:
+            meta?.state_pack_hash ||
+            (afterState as any)?.metadata?.state_pack_hash ||
+            meta?.pack_hash ||
+            '',
+        };
+      }
+
+      steps.push(stepItem);
     });
 
     visualStates.forEach((vs: any) => {
@@ -202,6 +241,7 @@ export class SynergyEngine {
 
     steps.sort((a, b) => a.timestamp - b.timestamp);
     steps.forEach((step, idx) => {
+      step.step = idx + 1;
       step.step_index = idx + 1;
     });
 

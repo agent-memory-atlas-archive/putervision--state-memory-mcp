@@ -1,8 +1,10 @@
 import Database from 'better-sqlite3';
+import crypto from 'node:crypto';
 import { getDb, getProjectSlug, resolveProjectRoot } from './db.js';
-import { BaseNode, Edge, NodeType, NodeRow, EdgeRow, NodeField } from '../schema/types.js';
+import { BaseNode, Edge, NodeType, NodeRow, EdgeRow, NodeField, TaskSlice } from '../schema/types.js';
 import { parseNodeRow, parseEdgeRow } from './row-mappers.js';
 import { getCurrentBranch } from '../utils/git.js';
+import { canonicalJsonStringify } from '../utils/canonical-json.js';
 import { searchTfidf } from './tfidf.js';
 import { logger } from '../utils/logger.js';
 import { findSubdirectoryMemoryDbs, SubdirectoryMemoryDb } from './subdirectory-scanner.js';
@@ -485,4 +487,119 @@ export class QueryEngine {
 
     return { nodes, edges };
   }
+
+  /**
+   * Fast compact TaskSlice query for System One fast decision layer.
+   */
+  static getTaskSlice(params: { project?: string }): TaskSlice {
+    const projectSlug = getProjectSlug(params.project);
+    const db = getDb(projectSlug);
+
+    // 1. Active task (in_progress)
+    const activeTaskRow = db
+      .prepare(
+        "SELECT * FROM nodes WHERE project = ? AND type = 'task' AND status = 'in_progress' ORDER BY updated_at DESC LIMIT 1"
+      )
+      .get(projectSlug) as NodeRow | undefined;
+    const activeTask = activeTaskRow ? parseNodeRow(activeTaskRow) : undefined;
+
+    let active_task_id = activeTask?.id;
+    let active_task_title = activeTask?.title;
+    let milestone_title: string | undefined = undefined;
+
+    // Parent milestone
+    if (activeTask) {
+      if (activeTask.metadata && (activeTask.metadata as any).milestone_id) {
+        const msRow = db
+          .prepare('SELECT title FROM nodes WHERE project = ? AND id = ?')
+          .get(projectSlug, (activeTask.metadata as any).milestone_id) as
+          | { title: string }
+          | undefined;
+        if (msRow) milestone_title = msRow.title;
+      }
+      if (!milestone_title) {
+        const edgeMs = db
+          .prepare(
+            `
+            SELECT n.title FROM edges e
+            JOIN nodes n ON (n.id = e.target_id OR n.id = e.source_id)
+            WHERE e.project = ? AND n.type = 'milestone'
+              AND (e.source_id = ? OR e.target_id = ?)
+            LIMIT 1
+          `
+          )
+          .get(projectSlug, activeTask.id, activeTask.id) as { title: string } | undefined;
+        if (edgeMs) milestone_title = edgeMs.title;
+      }
+    }
+
+    if (!milestone_title) {
+      const activeMs = db
+        .prepare(
+          "SELECT title FROM nodes WHERE project = ? AND type = 'milestone' AND status IN ('in_progress', 'upcoming') ORDER BY created_at ASC LIMIT 1"
+        )
+        .get(projectSlug) as { title: string } | undefined;
+      if (activeMs) milestone_title = activeMs.title;
+    }
+
+    // 2. Pending task count
+    const pendingRow = db
+      .prepare(
+        "SELECT COUNT(*) as count FROM nodes WHERE project = ? AND type = 'task' AND status = 'pending'"
+      )
+      .get(projectSlug) as { count: number } | undefined;
+    const pending_tasks_count = pendingRow ? pendingRow.count : 0;
+
+    // 3. Active blockers
+    const blockerRows = db
+      .prepare(
+        "SELECT id, title, metadata FROM nodes WHERE project = ? AND type = 'blocker' AND status = 'active' LIMIT 10"
+      )
+      .all(projectSlug) as NodeRow[];
+    const blockers = blockerRows.map((r) => {
+      let desc = r.title;
+      if (r.metadata) {
+        try {
+          const parsed = JSON.parse(r.metadata);
+          if (parsed.description) desc = parsed.description;
+        } catch {}
+      }
+      return { id: r.id, description: desc };
+    });
+
+    // 4. Recent decision IDs (last 5)
+    const decisionRows = db
+      .prepare(
+        "SELECT id FROM nodes WHERE project = ? AND type = 'decision' ORDER BY created_at DESC LIMIT 5"
+      )
+      .all(projectSlug) as Array<{ id: string }>;
+    const recent_decision_ids = decisionRows.map((r) => r.id);
+
+    // 5. task_graph_hash = Merkle root or SHA-256 of active tasks/edges
+    const activeNodes = db
+      .prepare(
+        "SELECT id, status, version FROM nodes WHERE project = ? AND status NOT IN ('cancelled', 'archived') ORDER BY id ASC"
+      )
+      .all(projectSlug) as Array<{ id: string; status: string; version?: number }>;
+    const summary = activeNodes.map((n) => ({
+      id: n.id,
+      s: n.status,
+      v: n.version ?? 1,
+    }));
+    const task_graph_hash = crypto
+      .createHash('sha256')
+      .update(canonicalJsonStringify(summary))
+      .digest('hex');
+
+    return {
+      active_task_id,
+      active_task_title,
+      milestone_title,
+      pending_tasks_count,
+      blockers,
+      recent_decision_ids,
+      task_graph_hash,
+    };
+  }
 }
+

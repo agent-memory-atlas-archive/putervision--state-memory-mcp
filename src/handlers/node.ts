@@ -15,6 +15,7 @@ import { QueryEngine } from '../engine/queries.js';
 import { EdgeEngine } from '../engine/edges.js';
 import { batchCreateNodes, batchUpdate } from '../engine/batch.js';
 import { getDb, getProjectSlug } from '../engine/db.js';
+import { EventEngine } from '../engine/events.js';
 import { parseArgs, suggestLinks, findFuzzyNodeSuggestions } from './helper.js';
 
 export const nodeHandlers = {
@@ -30,8 +31,78 @@ export const nodeHandlers = {
     switch (action) {
       case 'create': {
         const data = parseArgs(AddNodeSchema, args);
+        if (data.type === 'decision' && data.metadata) {
+          const meta = data.metadata as Record<string, any>;
+          const significance = typeof meta.significance === 'number' ? meta.significance : 0.8;
+          const tier = meta.reasoning_tier || meta.tier;
+          const isCacheHit = Boolean(meta.cache_hit || meta.from_cache);
+          const hasToken = Boolean(meta.token_id || meta.dispatch_token);
+
+          // If significance < 0.70 AND was an L1/L2 cache hit AND no dispatch token:
+          if (significance < 0.7 && (tier === 'L1' || tier === 'L2' || isCacheHit) && !hasToken) {
+            const projectSlug = getProjectSlug(data.project);
+            const db = getDb(projectSlug);
+            EventEngine.logEvent(db, {
+              project: projectSlug,
+              event_type: 'fast_decision',
+              entity_type: 'decision',
+              entity_id: `fast_${Date.now()}`,
+              after_state: {
+                title: data.title,
+                metadata: data.metadata,
+                status: data.status || 'accepted',
+              },
+              metadata: {
+                significance,
+                reasoning_tier: tier || 'L1',
+                cache_hit: true,
+                state_pack_hash: meta.state_pack_hash,
+              },
+            });
+            return {
+              id: `fast_decision_${Date.now()}`,
+              type: 'decision',
+              title: data.title,
+              status: 'logged_only',
+              project: projectSlug,
+              metadata: data.metadata,
+              tags: data.tags || [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+          }
+        }
+
         const node = GraphEngine.addNode(data);
         suggestLinks(node.project, node);
+
+        // If it's a decision node and metadata has task_id (or active in_progress task), link decided_in edge
+        if (node.type === 'decision') {
+          try {
+            const meta = (node.metadata || {}) as Record<string, any>;
+            let targetTaskId = meta.task_id;
+            if (!targetTaskId) {
+              const db = getDb(node.project);
+              const activeTask = db
+                .prepare(
+                  "SELECT id FROM nodes WHERE project = ? AND type = 'task' AND status = 'in_progress' ORDER BY updated_at DESC LIMIT 1"
+                )
+                .get(node.project) as { id: string } | undefined;
+              if (activeTask) targetTaskId = activeTask.id;
+            }
+            if (targetTaskId) {
+              EdgeEngine.addEdge({
+                project: node.project,
+                source_id: node.id,
+                target_id: targetTaskId,
+                type: 'decided_in',
+              });
+            }
+          } catch {
+            // Ignore edge collision or missing target
+          }
+        }
+
         return node;
       }
       case 'update': {

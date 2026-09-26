@@ -12,8 +12,14 @@ import { contextNotifier } from './notifications.js';
 export interface EventRecord {
   id: string;
   session_id: string | null;
-  event_type: 'node_created' | 'node_updated' | 'node_deleted' | 'edge_created' | 'edge_deleted';
-  entity_type: 'node' | 'edge';
+  event_type:
+    | 'node_created'
+    | 'node_updated'
+    | 'node_deleted'
+    | 'edge_created'
+    | 'edge_deleted'
+    | 'fast_decision';
+  entity_type: 'node' | 'edge' | 'decision';
   entity_id: string;
   before_state: string | null;
   after_state: string | null;

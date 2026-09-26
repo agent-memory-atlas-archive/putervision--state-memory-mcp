@@ -119,10 +119,14 @@ export const graphHandlers = {
         const data = parseArgs(NaturalLanguageQuerySchema, args);
         return executeNLQuery(data);
       }
+      case 'compact_slice': {
+        const project = (args as any)?.project;
+        return QueryEngine.getTaskSlice({ project });
+      }
       default:
         throw new McpError(
           ErrorCode.InvalidParams,
-          `Invalid action "${action}" for query_graph. Supported actions: subgraph, trace, raw, natural_language.`
+          `Invalid action "${action}" for query_graph. Supported actions: subgraph, trace, raw, natural_language, compact_slice.`
         );
     }
   },
