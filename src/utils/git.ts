@@ -24,6 +24,7 @@ export function getCurrentBranch(cwd: string = process.cwd()): string | null {
 }
 
 function getCurrentBranchDirect(cwd: string): string | null {
+  let isGitRepo = false;
   try {
     let current = path.resolve(cwd);
     while (true) {
@@ -39,6 +40,7 @@ function getCurrentBranchDirect(cwd: string): string | null {
         fs.existsSync(path.join(current, '.git')) ||
         fs.existsSync(path.join(current, '.state-memory-mcp'))
       ) {
+        isGitRepo = true;
         break; // reached project root
       }
       const parent = path.dirname(current);
@@ -50,6 +52,17 @@ function getCurrentBranchDirect(cwd: string): string | null {
   } catch {
     // Ignore config check errors
   }
+
+  if (!isGitRepo) {
+    return null;
+  }
+
+  const ciBranch =
+    process.env.GIT_BRANCH || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME;
+  if (ciBranch && !ciBranch.startsWith('refs/pull/')) {
+    return ciBranch.replace(/^heads\//, '').replace(/^refs\/heads\//, '');
+  }
+
   try {
     const branch = execFileSync('git', ['branch', '--show-current'], {
       cwd,
@@ -57,13 +70,24 @@ function getCurrentBranchDirect(cwd: string): string | null {
       encoding: 'utf-8',
     }).trim();
     if (branch) {
-      return branch;
+      return branch.replace(/^heads\//, '');
     }
   } catch (err) {
-    // Gracefully handle if not a git repository or git command fails
     logger.debug('Failed to auto-detect git branch.', err);
   }
-  return null;
+
+  try {
+    const revBranch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      encoding: 'utf-8',
+    }).trim();
+    if (revBranch && revBranch !== 'HEAD') {
+      return revBranch.replace(/^heads\//, '');
+    }
+  } catch {}
+
+  return 'main';
 }
 
 export function parseConventionalCommit(subject: string): {

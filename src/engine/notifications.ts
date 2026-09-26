@@ -8,7 +8,7 @@ import { VERSION } from '../utils/version.js';
 export interface ContextChangeEvent {
   project: string;
   eventType: string;
-  entityType: 'node' | 'edge';
+  entityType: 'node' | 'edge' | 'decision';
   entityId: string;
   timestamp: string;
   payload?: any;

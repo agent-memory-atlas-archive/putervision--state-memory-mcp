@@ -1,7 +1,7 @@
 # @putervision/state-memory-mcp
 
 [![npm version](https://img.shields.io/npm/v/@putervision/state-memory-mcp.svg)](https://www.npmjs.com/package/@putervision/state-memory-mcp)
-[![version](https://img.shields.io/badge/version-1.2.1-blue.svg)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-1.3.0-blue.svg)](./CHANGELOG.md)
 [![npm downloads](https://img.shields.io/npm/dm/@putervision/state-memory-mcp.svg)](https://www.npmjs.com/package/@putervision/state-memory-mcp)
 [![CI](https://github.com/putervision/state-memory-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/putervision/state-memory-mcp/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.18.0-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -47,9 +47,9 @@ state-memory-mcp init-global
 
 ## 🌟 Key Highlights
 
-- **🧠 Deterministic State Memory**: Zero LLM in the loop for memory operations; fast, deterministic SQLite graph traversals.
+- **🧠 Deterministic State Memory & Compact TaskSlices**: Zero LLM in the loop for memory operations; fast, deterministic SQLite graph traversals, and sub-1KB `TaskSlice` extraction for System 1 fast path evaluation.
 - **⚡ 13 Production-Grade Consolidated MCP Tools**: Full CRUD, relationship linking, DAG cycle checks, FTS5 search, TF-IDF RAG, time-travel history rollback, Spec-Driven Development, and auto-healing validation.
-- **📉 Efficient Context Management**: Offloads context to a local SQLite database, helping reduce prompt context bloat and context window usage.
+- **📉 Efficient Context Management & Decision Thresholding**: Offloads context to a local SQLite database, filters sub-0.70 routine decisions to append-only event logs to prevent graph bloat, and preserves high-significance turns.
 - **🚀 67%–74% Latency Reduction**: Eliminates multi-step file scanning loops; agents retrieve unblocked tasks and blockers in milliseconds.
 - **🤝 Multi-Agent Blackboard**: Shared Context Store allowing parallel subagents to publish decisions, tasks, and blocker updates safely.
 - **🎨 Interactive 3D Visualizer**: Browser-based dark-mode 3D WebGL force-directed graph visualizer (`state-memory-mcp view`).
@@ -62,11 +62,11 @@ state-memory-mcp init-global
 
 `@putervision/state-memory-mcp` provides **13 production-grade consolidated MCP tools** organized across 5 core workflow domains:
 
-- **Graph & Relationships**: `manage_nodes` (node CRUD, FTS5/TF-IDF vector search, atomic batch mutations, observation notes), `manage_edges` (typed DAG links, multimodal visual state linking).
+- **Graph & Relationships**: `manage_nodes` (node CRUD, FTS5/TF-IDF vector search, atomic batch mutations, observation notes, thresholded fast decision logging), `manage_edges` (typed DAG links, multimodal visual state linking).
 - **Task Execution & Work Queue**: `manage_tasks` (topological dependency queue, blocker detection, task completion with artifacts, auto-prune), `manage_sessions` (agent attribution, turn tracking, context bootstrap).
 - **Spec-Driven Development (SDD)**: `manage_specs` (PRD/RFC parsing, requirement-to-task decomposition, live acceptance criteria verification, compliance scoring).
 - **Analytics, Audit & Diagnostics**: `get_analytics` (velocity, burndown, token ROI, cognitive load, critical path), `get_events` (SHA-256 tamper-evident event ledger), `run_diagnostics` (DAG validation, health checks, AST reference integrity).
-- **Data, Snapshots & Multi-Agent**: `manage_snapshots` (checkpoints, time-travel undo), `manage_database` (backups, checksum audits, VCS branch merge), `manage_data` (bulk import/export, ML trajectories), `query_graph` (subgraphs, dependency tracing, raw SQL), `use_blackboard` (multi-agent asynchronous topic board).
+- **Data, Snapshots & Multi-Agent**: `manage_snapshots` (checkpoints, time-travel undo), `manage_database` (backups, checksum audits, VCS branch merge), `manage_data` (bulk import/export, ML trajectories with interleaved fast decision events), `query_graph` (subgraphs, dependency tracing, raw SQL, sub-1KB `compact_slice`), `use_blackboard` (multi-agent asynchronous topic board).
 
 👉 For complete parameter specifications, return schemas, and example payloads, see the **[Tools Reference Guide](docs/tools-reference.md)** and **[Formal API Reference](docs/api-reference.md)**.
 

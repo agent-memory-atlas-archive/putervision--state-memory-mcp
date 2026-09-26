@@ -222,3 +222,16 @@ export interface BatchAddEdgesParams {
   project?: string;
   edges: BatchEdgeInput[];
 }
+
+export interface TaskSlice {
+  active_task_id?: string;
+  active_task_title?: string;
+  milestone_title?: string;
+  pending_tasks_count: number;
+  blockers: Array<{
+    id: string;
+    description: string;
+  }>;
+  recent_decision_ids: string[];
+  task_graph_hash: string; // Merkle root of active task DAG
+}
