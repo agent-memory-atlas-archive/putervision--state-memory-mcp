@@ -136,6 +136,8 @@ describe('TF-IDF Vector Search Engine', () => {
 
     it('should truncate candidate list to 1000 nodes for TF-IDF to prevent memory issues', async () => {
       const db = getDb(project);
+      const { getCurrentBranch } = await import('../../src/utils/git.js');
+      const branch = getCurrentBranch() || undefined;
 
       // Clear nodes temporarily (at the end of the suite, so we do not disrupt other tests)
       db.prepare('DELETE FROM nodes').run();
@@ -144,9 +146,9 @@ describe('TF-IDF Vector Search Engine', () => {
       db.transaction(() => {
         for (let i = 0; i < 1005; i++) {
           db.prepare(
-            'INSERT INTO nodes (id, type, title, status, project, created_at, updated_at) ' +
-              "VALUES (?, 'task', ?, 'pending', ?, datetime('now'), datetime('now'))"
-          ).run(`mock-${i}`, `Node Auth ${i}`, project);
+            'INSERT INTO nodes (id, type, title, status, project, git_branch, created_at, updated_at) ' +
+              "VALUES (?, 'task', ?, 'pending', ?, ?, datetime('now'), datetime('now'))"
+          ).run(`mock-${i}`, `Node Auth ${i}`, project, branch);
         }
       })();
 

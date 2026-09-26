@@ -107,10 +107,14 @@ describe('System One TaskSlice and Decision Logging', () => {
     expect(lowSigResult.id).toMatch(/^fast_decision_/);
 
     const db = getDb(project);
-    const dbNode = db.prepare('SELECT * FROM nodes WHERE project = ? AND title = ?').get(project, 'Routine cached turn');
+    const dbNode = db
+      .prepare('SELECT * FROM nodes WHERE project = ? AND title = ?')
+      .get(project, 'Routine cached turn');
     expect(dbNode).toBeUndefined(); // Did NOT pollute graph nodes table
 
-    const dbEvent = db.prepare("SELECT * FROM events WHERE project = ? AND event_type = 'fast_decision'").get(project);
+    const dbEvent = db
+      .prepare("SELECT * FROM events WHERE project = ? AND event_type = 'fast_decision'")
+      .get(project);
     expect(dbEvent).toBeDefined(); // Logged to Merkle events table
 
     // High-significance decision (>= 0.70)
@@ -130,11 +134,15 @@ describe('System One TaskSlice and Decision Logging', () => {
     expect(highSigResult.id).toBeDefined();
     expect(highSigResult.status).toBe('accepted');
 
-    const createdNode = db.prepare('SELECT * FROM nodes WHERE project = ? AND id = ?').get(project, highSigResult.id);
+    const createdNode = db
+      .prepare('SELECT * FROM nodes WHERE project = ? AND id = ?')
+      .get(project, highSigResult.id);
     expect(createdNode).toBeDefined();
 
     // Check decided_in edge auto-link to active task
-    const edge = db.prepare("SELECT * FROM edges WHERE project = ? AND source_id = ? AND type = 'decided_in'").get(project, highSigResult.id) as any;
+    const edge = db
+      .prepare("SELECT * FROM edges WHERE project = ? AND source_id = ? AND type = 'decided_in'")
+      .get(project, highSigResult.id) as any;
     expect(edge).toBeDefined();
     expect(edge.target_id).toBe(activeTask.id);
   });
@@ -155,7 +163,9 @@ describe('System One TaskSlice and Decision Logging', () => {
 
     expect(gatedResult.status).toBe('accepted');
     const db = getDb(project);
-    const createdNode = db.prepare('SELECT * FROM nodes WHERE project = ? AND id = ?').get(project, gatedResult.id);
+    const createdNode = db
+      .prepare('SELECT * FROM nodes WHERE project = ? AND id = ?')
+      .get(project, gatedResult.id);
     expect(createdNode).toBeDefined();
   });
 

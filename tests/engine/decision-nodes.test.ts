@@ -43,10 +43,14 @@ describe('State-Memory Decision Nodes & Significance Thresholding', () => {
     expect(lowSigResult.id).toMatch(/^fast_decision_/);
 
     const db = getDb(project);
-    const dbNode = db.prepare('SELECT * FROM nodes WHERE project = ? AND title = ?').get(project, 'Sub-threshold Routine Turn');
+    const dbNode = db
+      .prepare('SELECT * FROM nodes WHERE project = ? AND title = ?')
+      .get(project, 'Sub-threshold Routine Turn');
     expect(dbNode).toBeUndefined(); // Graph node not created
 
-    const dbEvent = db.prepare("SELECT * FROM events WHERE project = ? AND event_type = 'fast_decision'").get(project) as any;
+    const dbEvent = db
+      .prepare("SELECT * FROM events WHERE project = ? AND event_type = 'fast_decision'")
+      .get(project) as any;
     expect(dbEvent).toBeDefined();
     expect(dbEvent.metadata).toContain('hash-abc-123');
   });
@@ -76,10 +80,14 @@ describe('State-Memory Decision Nodes & Significance Thresholding', () => {
     expect(highSigResult.status).toBe('accepted');
 
     const db = getDb(project);
-    const createdNode = db.prepare('SELECT * FROM nodes WHERE project = ? AND id = ?').get(project, highSigResult.id);
+    const createdNode = db
+      .prepare('SELECT * FROM nodes WHERE project = ? AND id = ?')
+      .get(project, highSigResult.id);
     expect(createdNode).toBeDefined();
 
-    const edge = db.prepare("SELECT * FROM edges WHERE project = ? AND source_id = ? AND type = 'decided_in'").get(project, highSigResult.id) as any;
+    const edge = db
+      .prepare("SELECT * FROM edges WHERE project = ? AND source_id = ? AND type = 'decided_in'")
+      .get(project, highSigResult.id) as any;
     expect(edge).toBeDefined();
     expect(edge.target_id).toBe(activeTask.id);
   });
@@ -92,7 +100,7 @@ describe('State-Memory Decision Nodes & Significance Thresholding', () => {
       title: 'Gated Action with Token',
       status: 'accepted',
       metadata: {
-        significance: 0.20,
+        significance: 0.2,
         reasoning_tier: 'L1',
         token_id: 'token-verified-456',
       },
@@ -100,7 +108,9 @@ describe('State-Memory Decision Nodes & Significance Thresholding', () => {
 
     expect(gatedResult.status).toBe('accepted');
     const db = getDb(project);
-    const createdNode = db.prepare('SELECT * FROM nodes WHERE project = ? AND id = ?').get(project, gatedResult.id);
+    const createdNode = db
+      .prepare('SELECT * FROM nodes WHERE project = ? AND id = ?')
+      .get(project, gatedResult.id);
     expect(createdNode).toBeDefined();
   });
 });

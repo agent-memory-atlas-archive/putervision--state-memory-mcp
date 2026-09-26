@@ -193,12 +193,9 @@ export class SynergyEngine {
         } catch {}
         stepItem.decision = {
           action:
-            (afterState as any)?.title ||
-            (afterState as any)?.action ||
-            meta?.action ||
-            'unknown',
+            (afterState as any)?.title || (afterState as any)?.action || meta?.action || 'unknown',
           tier: meta?.reasoning_tier || meta?.tier || 'L1',
-          confidence: meta?.confidence ?? (meta?.significance ?? 1.0),
+          confidence: meta?.confidence ?? meta?.significance ?? 1.0,
           pack_hash:
             meta?.state_pack_hash ||
             (afterState as any)?.metadata?.state_pack_hash ||

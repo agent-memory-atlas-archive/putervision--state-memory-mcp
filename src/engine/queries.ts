@@ -1,7 +1,15 @@
 import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
 import { getDb, getProjectSlug, resolveProjectRoot } from './db.js';
-import { BaseNode, Edge, NodeType, NodeRow, EdgeRow, NodeField, TaskSlice } from '../schema/types.js';
+import {
+  BaseNode,
+  Edge,
+  NodeType,
+  NodeRow,
+  EdgeRow,
+  NodeField,
+  TaskSlice,
+} from '../schema/types.js';
 import { parseNodeRow, parseEdgeRow } from './row-mappers.js';
 import { getCurrentBranch } from '../utils/git.js';
 import { canonicalJsonStringify } from '../utils/canonical-json.js';
@@ -513,8 +521,7 @@ export class QueryEngine {
         const msRow = db
           .prepare('SELECT title FROM nodes WHERE project = ? AND id = ?')
           .get(projectSlug, (activeTask.metadata as any).milestone_id) as
-          | { title: string }
-          | undefined;
+          { title: string } | undefined;
         if (msRow) milestone_title = msRow.title;
       }
       if (!milestone_title) {
@@ -602,4 +609,3 @@ export class QueryEngine {
     };
   }
 }
-
