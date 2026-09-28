@@ -74,6 +74,16 @@ export const DESTRUCTIVE_TOOLS = new Set([
   'prune_events',
 ]);
 
+export const TOOLS_WITH_DESTRUCTIVE_ACTIONS = new Set([
+  'manage_nodes',
+  'manage_edges',
+  'manage_database',
+  'manage_snapshots',
+  'manage_data',
+  'run_diagnostics',
+  'use_blackboard',
+]);
+
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -84,7 +94,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_nodes',
     description:
-      'Manage graph nodes in the state graph. Supported actions: create (add single node), update (modify node properties), get (fetch node with edges), remove (delete node and cascade edges), list (filter nodes), search (FTS5 or TF-IDF search), batch_create (create multiple nodes atomically), batch_update (update multiple nodes atomically), add_note (log observation node with optional context link).',
+      'Manage graph nodes in the state graph (actions: create, update, get, remove, list, search, batch_create, batch_update, add_note). Use manage_nodes instead of manage_tasks when operating on general node types (decisions, artifacts, plans, milestones, blockers) rather than runnable task workflow states.\n\nReturns node object, edge connections, batch results, or search matches.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -101,7 +111,8 @@ export const toolDefinitions: ToolDefinition[] = [
             'batch_update',
             'add_note',
           ],
-          description: 'The node management action to execute.',
+          description:
+            'The node management action to execute: create, update, get, remove, list, search, batch_create, batch_update, add_note.',
         },
         id: { type: 'string', description: 'Unique node identifier for get, update, or remove.' },
         type: {
@@ -181,14 +192,15 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_edges',
     description:
-      'Manage typed graph relationships between nodes. Supported actions: add (create typed relationship), remove (delete relationship), batch_add (create multiple relationships atomically), link_visual (link task or artifact to visual memory state).',
+      'Manage typed graph relationships between nodes (actions: add, remove, batch_add, link_visual). Use manage_edges instead of manage_nodes when creating or modifying relationships between existing entities rather than entity data itself.\n\nReturns created edge record, batch count, or visual link confirmation.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['add', 'remove', 'batch_add', 'link_visual'],
-          description: 'The edge management action to execute.',
+          description:
+            'The edge management action to execute: add, remove, batch_add, link_visual.',
         },
         source_id: { type: 'string', description: 'ID of the source node.' },
         target_id: { type: 'string', description: 'ID of the target node.' },
@@ -247,14 +259,14 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_sessions',
     description:
-      'Manage agent tracking sessions and multi-turn workflow attribution. Supported actions: start (begin tracked session), end (conclude session), list (view active/historical sessions), bootstrap (single-turn start + context snapshot + next tasks).',
+      'Manage agent tracking sessions and multi-turn workflow attribution (actions: start, end, list, bootstrap). Use manage_sessions instead of manage_tasks when establishing agent session boundaries and tracking multi-turn workflows rather than individual work items.\n\nReturns session record, bootstrap context snapshot, or active session listing.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['start', 'end', 'list', 'bootstrap'],
-          description: 'The session management action to execute.',
+          description: 'The session management action to execute: start, end, list, bootstrap.',
         },
         agent_id: {
           type: 'string',
@@ -279,7 +291,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_tasks',
     description:
-      'Task prioritization, workflow execution, blockers, and stale task management. Supported actions: next (query prioritized unblocked tasks), complete (mark done and optionally create artifact), find_blocked (find tasks blocked by a decision), find_stale (find idle/untouched tasks), find_blockers (find active blockers), find_similar_blockers (TF-IDF search for previously resolved blockers), auto_prune (cancel stale in-progress tasks).',
+      'Task prioritization, workflow execution, blockers, and stale task management (actions: next, complete, find_blocked, find_stale, find_blockers, find_similar_blockers, auto_prune). Use manage_tasks instead of query_graph when querying runnable tasks by priority order or resolving execution blockers.\n\nReturns prioritized runnable tasks, blocker hierarchy, similar resolved blockers, or completion confirmation.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -294,7 +306,8 @@ export const toolDefinitions: ToolDefinition[] = [
             'find_similar_blockers',
             'auto_prune',
           ],
-          description: 'The task management action to execute.',
+          description:
+            'The task management action to execute: next, complete, find_blocked, find_stale, find_blockers, find_similar_blockers, auto_prune.',
         },
         task_id: { type: 'string', description: 'Task node ID to complete.' },
         decision_id: { type: 'string', description: 'Decision node ID for find_blocked.' },
@@ -352,14 +365,15 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_snapshots',
     description:
-      'State checkpointing, time travel, diffing, and undo operations. Supported actions: save (create named checkpoint), list (list checkpoints), diff (compare two snapshots), get_state (reconstruct graph state at historical timestamp), revert (rollback graph to historical timestamp), undo (revert last mutation on a node), get_history (chronological audit log for a node).',
+      'State checkpointing, time travel, diffing, and undo operations (actions: save, list, diff, get_state, revert, undo, get_history). Use manage_snapshots instead of manage_database when reverting state graph mutations or comparing checkpoints rather than physical database file maintenance.\n\nReturns snapshot record, state graph diff, historical graph state, or node audit history.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['save', 'list', 'diff', 'get_state', 'revert', 'undo', 'get_history'],
-          description: 'The snapshot management action to execute.',
+          description:
+            'The snapshot management action to execute: save, list, diff, get_state, revert, undo, get_history.',
         },
         session_id: { type: 'string', description: 'Optional session identifier for save.' },
         force: { type: 'boolean', description: 'Force snapshot even if node count is high.' },
@@ -376,7 +390,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_specs',
     description:
-      'Spec-Driven Development (SDD) lifecycle and workflow template generation. Supported actions: scaffold (generate spec template in .specs/), ingest (parse PRD/Gherkin into graph nodes), export (export spec node back to Markdown/Gherkin), compliance (calculate requirement coverage matrix), verify (mark acceptance criterion verified/failing), decompose_feature (decompose feature into plan/milestones/subtasks), template (scaffold FDD or RFC template).',
+      'Spec-Driven Development (SDD) lifecycle and workflow template generation (actions: scaffold, ingest, export, compliance, verify, decompose_feature, template). Use manage_specs instead of manage_nodes when authoring, ingesting, or verifying formal SDD specifications against acceptance criteria.\n\nReturns specification AST, compliance matrix, verification verdict, or decomposed feature plan.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -391,7 +405,8 @@ export const toolDefinitions: ToolDefinition[] = [
             'decompose_feature',
             'template',
           ],
-          description: 'The specification or template action to execute.',
+          description:
+            'The specification or template action to execute: scaffold, ingest, export, compliance, verify, decompose_feature, template.',
         },
         title: { type: 'string', description: 'Title of feature spec or template.' },
         name: { type: 'string', description: 'Name of template or feature.' },
@@ -434,14 +449,15 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_database',
     description:
-      'Physical SQLite database maintenance, backups, integrity checks, and Git VCS state sync. Supported actions: backup (online SQLite backup), restore (destructive restore from backup), audit (foreign keys and physical integrity check), merge (merge external SQLite state DB), branch_diff (diff state nodes across git branches), branch_merge (resolve graph conflicts during branch merge).',
+      'Physical SQLite database maintenance, backups, integrity checks, and Git VCS state sync (actions: backup, restore, audit, merge, branch_diff, branch_merge). Use manage_database instead of manage_snapshots when managing physical SQLite files, cross-branch merges, or database corruption audits.\n\nReturns database backup path, foreign key integrity report, branch merge conflict report, or diff.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['backup', 'restore', 'audit', 'merge', 'branch_diff', 'branch_merge'],
-          description: 'The database administration or VCS sync action to execute.',
+          description:
+            'The database administration or VCS sync action to execute: backup, restore, audit, merge, branch_diff, branch_merge.',
         },
         outputPath: { type: 'string', description: 'Target destination file path for backup.' },
         backupPath: { type: 'string', description: 'Source backup file path for restore.' },
@@ -465,7 +481,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_data',
     description:
-      'Export and import graph structures, issue tracker items, fine-tuning trajectories, and multimodal synergy metrics. Supported actions: export_graph (export to JSON/DOT/Mermaid/HTML), export_issues (export to GitHub/Jira JSON), export_trajectories (export JSONL fine-tuning data), export_joint_trajectories (export interleaved state + vision data), export_synergy_metrics (compute dual-memory metrics), import_graph (bulk import nodes & edges), import_issues (import GitHub/Jira issues), import_spec (import PRD/Gherkin spec).',
+      'Export and import graph structures, issue tracker items, fine-tuning trajectories, and multimodal synergy metrics (actions: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, import_graph, import_issues, import_spec). Use manage_data instead of query_graph when bulk-transferring graph data or generating AI training datasets.\n\nReturns serialized graph payload, trajectory dataset, synergy metrics, or import statistics.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -481,7 +497,8 @@ export const toolDefinitions: ToolDefinition[] = [
             'import_issues',
             'import_spec',
           ],
-          description: 'The data export or import action to execute.',
+          description:
+            'The data export or import action to execute: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, import_graph, import_issues, import_spec.',
         },
         format: {
           type: 'string',
@@ -528,14 +545,15 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'query_graph',
     description:
-      'Query graph topology, neighborhoods, dependency paths, safe read-only SQL queries, and compact System One task slices. Supported actions: subgraph (fetch N-hop neighborhood around root node), trace (trace dependency chain upstream or downstream with cycle detection), raw (execute safe read-only SELECT query against SQLite), natural_language (translate natural language query into graph operations), compact_slice (fast System One decision slice).',
+      'Query graph topology, neighborhoods, dependency paths, safe read-only SQL queries, and compact System One task slices (actions: subgraph, trace, raw, natural_language, compact_slice). Use query_graph instead of get_analytics when exploring graph topology and path traversals rather than aggregated numerical metrics.\n\nReturns subgraph nodes and edges, upstream/downstream trace path, raw SQL rows, or compact task slice.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['subgraph', 'trace', 'raw', 'natural_language', 'compact_slice'],
-          description: 'The graph query action to execute.',
+          description:
+            'The graph query action to execute: subgraph, trace, raw, natural_language, compact_slice.',
         },
         root_id: { type: 'string', description: 'Root node ID for subgraph query.' },
         node_id: { type: 'string', description: 'Starting node ID for trace.' },
@@ -569,7 +587,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'get_analytics',
     description:
-      'Compute workflow metrics, velocity, burndown, cognitive load, decision lineages, and contradiction audits. Supported actions: summary (project overview), velocity (throughput and duration), burndown (time-series remaining tasks chart), value_metrics (token savings and ROI), cognitive_load (ICL and ECL context complexity), critical_path (longest unfinished task chain), context_snapshot / active_context (consolidated overview), decision_trail (trace decision lineage), find_related_decisions (find decisions related to an artifact), contradictions (audit for conflicting decisions or broken states).',
+      'Compute workflow metrics, velocity, burndown, cognitive load, decision lineages, and contradiction audits (actions: summary, velocity, burndown, value_metrics, cognitive_load, critical_path, context_snapshot, active_context, decision_trail, find_related_decisions, contradictions). Use get_analytics instead of query_graph when calculating high-level progress statistics, ROI metrics, or auditing decision conflicts.\n\nReturns summary dashboard, velocity charts, burndown series, cognitive load metrics, critical path DAG, or contradiction reports.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -588,7 +606,8 @@ export const toolDefinitions: ToolDefinition[] = [
             'find_related_decisions',
             'contradictions',
           ],
-          description: 'The analytics or decision analysis action to execute.',
+          description:
+            'The analytics or decision analysis action to execute: summary, velocity, burndown, value_metrics, cognitive_load, critical_path, context_snapshot, active_context, decision_trail, find_related_decisions, contradictions.',
         },
         milestone_id: {
           type: 'string',
@@ -615,14 +634,14 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'get_events',
     description:
-      'Inspect the append-only event audit ledger, query structured changesets, and generate session post-mortems. Supported actions: log (query event ledger with filters), changelog (get structured graph diff since timestamp or session), post_mortem (analyze a session and produce a structured markdown report).',
+      'Inspect the append-only event audit ledger, query structured changesets, and generate session post-mortems (actions: log, changelog, post_mortem). Use get_events instead of manage_snapshots when examining the granular chronological sequence of mutations rather than restoring state checkpoints.\n\nReturns chronological event array, structured changeset diff, or session post-mortem markdown report.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['log', 'changelog', 'post_mortem'],
-          description: 'The event query action to execute.',
+          description: 'The event query action to execute: log, changelog, post_mortem.',
         },
         session_id: { type: 'string', description: 'Session ID for log or post_mortem.' },
         since: {
@@ -642,7 +661,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'run_diagnostics',
     description:
-      'Run graph sanity checks, health diagnostics, reference validation, audit chain verification, and storage maintenance. Supported actions: validate (check cycles, orphans, dangling edges), doctor (database WAL mode, schema version, storage health), check_refs (validate file paths and AST symbols with auto-heal), audit_chain (verify SHA-256 event hash integrity), compact (reclaim SQLite storage), archive (archive old completed tasks), prune_events (permanently prune events - admin mode required), version (retrieve package version info), dedupe (detect and merge duplicate nodes).',
+      'Run graph sanity checks, health diagnostics, reference validation, audit chain verification, and storage maintenance (actions: validate, doctor, check_refs, audit_chain, compact, archive, prune_events, version, dedupe). Use run_diagnostics instead of get_analytics when performing database repair, AST reference auto-healing, or verifying SHA-256 event hash chains.\n\nReturns validation diagnostics, health report, broken reference repair log, Merkle chain audit, or maintenance stats.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -659,7 +678,8 @@ export const toolDefinitions: ToolDefinition[] = [
             'version',
             'dedupe',
           ],
-          description: 'The diagnostic or maintenance action to execute.',
+          description:
+            'The diagnostic or maintenance action to execute: validate, doctor, check_refs, audit_chain, compact, archive, prune_events, version, dedupe.',
         },
         apply: {
           type: 'boolean',
@@ -700,14 +720,15 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'use_blackboard',
     description:
-      'Multi-agent shared blackboard for asynchronous coordination. Actions: get (read notices or fetch by id), set (post notice with TTL), delete (remove by id or topic), lease (acquire or release mutex), list (list active topics). Legacy post/read supported.',
+      'Multi-agent shared blackboard for asynchronous coordination and mutex leases (actions: get, set, delete, lease, list, post, read). Use use_blackboard instead of manage_nodes when exchanging transient inter-agent messages or mutex resource leases rather than recording persistent graph knowledge.\n\nReturns blackboard message payload, lease acquisition status, active topic list, or deletion confirmation.',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
           enum: ['get', 'set', 'delete', 'lease', 'list', 'post', 'read'],
-          description: 'The blackboard action to execute.',
+          description:
+            'The blackboard action to execute: get, set, delete, lease, list, post, read.',
         },
         topic: { type: 'string', description: 'Blackboard topic or channel name.' },
         content: { type: 'string', description: 'Message payload to post/set.' },

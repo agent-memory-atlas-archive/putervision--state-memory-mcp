@@ -4,6 +4,7 @@ import {
   READ_ONLY_TOOLS,
   READ_ONLY_ACTIONS,
   DESTRUCTIVE_TOOLS,
+  TOOLS_WITH_DESTRUCTIVE_ACTIONS,
   DESTRUCTIVE_ACTIONS,
 } from './definitions.js';
 import { toolHandlers } from '../handlers/index.js';
@@ -86,9 +87,10 @@ export function registerAllTools(server: NativeMcpServer | any): void {
       .join(' ');
 
     const isReadOnlyTool = READ_ONLY_TOOLS.has(name);
-    const effectiveSchema = JSON.parse(JSON.stringify(toolDef.inputSchema));
-    if (effectiveSchema.properties?.action) {
-      delete effectiveSchema.properties.action.enum;
+    const discoverySchema = JSON.parse(JSON.stringify(toolDef.inputSchema));
+    const runtimeValidationSchema = JSON.parse(JSON.stringify(toolDef.inputSchema));
+    if (runtimeValidationSchema.properties?.action) {
+      delete runtimeValidationSchema.properties.action.enum;
     }
 
     server.registerTool(
@@ -96,11 +98,13 @@ export function registerAllTools(server: NativeMcpServer | any): void {
       {
         title,
         description: toolDef.description,
-        inputSchema: effectiveSchema,
-        rawJsonSchema: effectiveSchema,
+        inputSchema: discoverySchema,
+        rawJsonSchema: discoverySchema,
+        validationSchema: runtimeValidationSchema,
         annotations: {
           readOnlyHint: isReadOnlyTool,
-          destructiveHint: false,
+          destructiveHint: TOOLS_WITH_DESTRUCTIVE_ACTIONS.has(name),
+          idempotentHint: isReadOnlyTool,
           openWorldHint: false,
         },
       },
