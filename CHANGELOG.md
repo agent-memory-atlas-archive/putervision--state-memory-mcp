@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.1] - 2026-09-28
+
+### 🛠️ Glama TDQS Optimizations & MCP Annotations
+- Added `idempotentHint` and explicit `destructiveHint` annotations across tool definitions.
+- Enhanced tool descriptions with action enum definitions in the opening summary, routing guidance sentences ('Use X instead of Y when Z'), and standardized Returns blocks.
+- Separated discovery schemas with complete action enums from runtime self-healing validation schemas.
+- Synchronized package manifests, registry configurations, and documentation across the Pentad.
+
 ## [1.2.0] - 2026-09-15
 
 ### 🚀 Zero-Dependency Native MCP Transport & Cross-Pentad Synchronization

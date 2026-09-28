@@ -47,9 +47,11 @@ export interface ToolDefinitionMetadata {
   title?: string;
   description?: string;
   inputSchema?: Record<string, any>;
+  validationSchema?: Record<string, any>;
   annotations?: {
     readOnlyHint?: boolean;
     destructiveHint?: boolean;
+    idempotentHint?: boolean;
     openWorldHint?: boolean;
   };
 }
@@ -59,6 +61,7 @@ export interface ToolRegistration {
   title?: string;
   description: string;
   inputSchema: Record<string, any>;
+  validationSchema?: Record<string, any>;
   annotations?: Record<string, any>;
   handler: (args: any, extra?: { signal?: AbortSignal }) => Promise<any> | any;
 }
@@ -273,6 +276,7 @@ export class NativeMcpServer {
       title: metadata.title,
       description: metadata.description || '',
       inputSchema: schema || { type: 'object' },
+      validationSchema: metadata.validationSchema,
       annotations: metadata.annotations,
       handler,
     });
@@ -450,7 +454,7 @@ export class NativeMcpServer {
           throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
         }
         const args = params.arguments || {};
-        validateParams(name, tool.inputSchema, args);
+        validateParams(name, tool.validationSchema || tool.inputSchema, args);
 
         const out = await tool.handler(args, { signal });
         if (out && typeof out === 'object' && Array.isArray((out as any).content)) {
