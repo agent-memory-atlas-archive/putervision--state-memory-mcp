@@ -21,6 +21,20 @@ export interface ValidateIssue {
   remediation?: string;
 }
 
+export const EXTERNAL_ID_PREFIXES = ['entity_', 'int_', 'sha256:', 'vs_', 'ui:', 'runtime:'];
+export const CROSS_SERVER_EDGE_TYPES = new Set([
+  'link_spatial',
+  'link_intention',
+  'link_behavior',
+  'renders_state',
+  'verifies_visual_state',
+  'blocked_by_visual_state',
+]);
+
+export function isExternalId(id: string): boolean {
+  return EXTERNAL_ID_PREFIXES.some((prefix) => id.startsWith(prefix));
+}
+
 export function validateGraph(
   db: Database.Database,
   params: {
@@ -191,7 +205,7 @@ export function validateGraph(
 
   // 6. dangling_edges
   if (checksToRun.includes('dangling_edges')) {
-    const rows = db
+    const candidateRows = db
       .prepare(
         `
       SELECT e.id, e.source_id, e.target_id, e.type
@@ -203,6 +217,17 @@ export function validateGraph(
     `
       )
       .all(params.project) as { id: string; source_id: string; target_id: string; type: string }[];
+
+    const rows = candidateRows.filter((row) => {
+      const sourceExists = db.prepare('SELECT 1 FROM nodes WHERE id = ?').get(row.source_id);
+      const targetExists = db.prepare('SELECT 1 FROM nodes WHERE id = ?').get(row.target_id);
+
+      const sourceValid = sourceExists || isExternalId(row.source_id);
+      const targetValid =
+        targetExists || isExternalId(row.target_id) || CROSS_SERVER_EDGE_TYPES.has(row.type);
+
+      return !(sourceValid && targetValid);
+    });
 
     if (params.auto_fix && rows.length > 0) {
       db.transaction(() => {

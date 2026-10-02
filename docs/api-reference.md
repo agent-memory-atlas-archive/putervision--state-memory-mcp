@@ -1,4 +1,4 @@
-# 📘 @putervision/state-memory-mcp Formal API Reference (v1.3.1 — 13 Consolidated Tools)
+# 📘 @putervision/state-memory-mcp Formal API Reference (v1.4.0 — 13 Consolidated Tools)
 
 This document provides formal API specifications, parameter schemas, return shapes, and example JSON payloads for the **13 consolidated Model Context Protocol (MCP) tools** provided by `@putervision/state-memory-mcp`.
 
@@ -10,7 +10,7 @@ This document provides formal API specifications, parameter schemas, return shap
 Unified tool for graph node creation, updates, querying, search, and batch mutations.
 
 #### Actions:
-- `create`: Add a single node (`task`, `decision`, `artifact`, `plan`, `milestone`, `blocker`, `observation`, `spec`, `requirement`, `acceptance_criterion`, `visual_state`).
+- `create`: Add a single node (`task`, `decision`, `artifact`, `plan`, `milestone`, `blocker`, `observation`, `spec`, `requirement`, `acceptance_criterion`, `visual_state`, `spatial_entity`).
 - `update`: Update properties and status of an existing node. Supports optimistic concurrency version checking.
 - `get`: Fetch single node details with optional inbound and outbound edges.
 - `remove`: Delete a node and cascade-delete connected edges.
@@ -36,13 +36,14 @@ Unified tool for graph node creation, updates, querying, search, and batch mutat
 ---
 
 ### `manage_edges`
-Manage typed relationships between graph nodes and multimodal visual memory links.
+Manage typed relationships between graph nodes, multimodal visual memory links, and 3D spatial models.
 
 #### Actions:
-- `add`: Add a typed edge between two nodes (`depends_on`, `blocks`, `produces`, `references`, `updates`, `contradicts`, `part_of`, `child_of`, `implements`, `decided_in`, `verifies`, `satisfies`, `renders_state`, `blocked_by_visual_state`, `verifies_visual_state`).
+- `add`: Add a typed edge between two nodes (`depends_on`, `blocks`, `produces`, `references`, `updates`, `contradicts`, `part_of`, `child_of`, `implements`, `decided_in`, `verifies`, `satisfies`, `renders_state`, `blocked_by_visual_state`, `verifies_visual_state`, `occupies_region`, `spatial_target_of`, `affords`).
 - `remove`: Remove a specific typed relationship.
 - `batch_add`: Add multiple edge objects in a single atomic transaction.
 - `link_visual`: Link a task, artifact, or blocker to a `vision-memory-mcp` visual state ID.
+- `link_spatial`: Link a node to a `world-model-mcp` spatial entity or coordinate region.
 
 #### Example Request (`add`):
 ```json

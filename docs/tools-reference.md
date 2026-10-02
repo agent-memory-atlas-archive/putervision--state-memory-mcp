@@ -1,4 +1,4 @@
-# 🧰 State-Memory-MCP Tool Reference (v1.3.1 — 13 Consolidated Tools)
+# 🧰 State-Memory-MCP Tool Reference (v1.4.0 — 13 Consolidated Tools)
 
 `@putervision/state-memory-mcp` exposes **13 domain-oriented MCP tools** (≤ 15 tools) that use action parameters to provide complete graph lifecycle management, dependency analysis, Spec-Driven Development, and multimodal synergy.
 
@@ -48,6 +48,7 @@ Manage typed relationships between graph nodes.
   - `remove`: Delete specific edge relationship (`source_id`, `target_id`, `type`).
   - `batch_add`: Atomic creation of multiple edge relationships (`edges: [...]`).
   - `link_visual`: Link task or artifact to visual memory state ID (`target_id`, `visual_state_id`, `relationship?`, `visual_description?`, `source_url?`).
+  - `link_spatial`: Link task, blocker, or entity node to a spatial entity or region (`target_id`, `spatial_entity_id`, `relationship?`, `coordinates?`).
 
 ---
 

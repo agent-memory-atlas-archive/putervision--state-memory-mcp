@@ -15,6 +15,7 @@ import {
   ImportGraphSchema,
   ImportIssuesSchema,
   IngestSpecSchema,
+  FromTickDataSchema,
 } from '../schema/schemas.js';
 import { SnapshotEngine } from '../engine/snapshots.js';
 import { TrajectoryEngine } from '../engine/trajectories.js';
@@ -160,10 +161,21 @@ export const snapshotHandlers = {
           project: projectSlug,
         });
       }
+      case 'from_tick': {
+        const data = parseArgs(FromTickDataSchema, args);
+        const projectSlug = getProjectSlug(data.project);
+        const db = getDb(projectSlug);
+        const outcomes = data.batch || data.outcomes || [];
+        return EventEngine.ingestFromTick(db, {
+          project: projectSlug,
+          session_id: data.session_id,
+          batch: outcomes,
+        });
+      }
       default:
         throw new McpError(
           ErrorCode.InvalidParams,
-          `Invalid action "${action}" for manage_data. Supported actions: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, import_graph, import_issues, import_spec.`
+          `Invalid action "${action}" for manage_data. Supported actions: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, from_tick, import_graph, import_issues, import_spec.`
         );
     }
   },

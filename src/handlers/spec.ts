@@ -62,7 +62,10 @@ export const specHandlers = {
         const params = parseArgs(GetSpecComplianceSchema, args);
         const projectSlug = getProjectSlug(params.project);
         const db = getDb(projectSlug);
-        return calculateSpecCompliance(db, projectSlug);
+        return calculateSpecCompliance(db, projectSlug, {
+          visual_spec_hash: params.visual_spec_hash,
+          spatial_proof_hash: params.spatial_proof_hash,
+        });
       }
       case 'verify': {
         const params = parseArgs(VerifyRequirementSchema, args);

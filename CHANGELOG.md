@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.4.0] - 2026-10-02
+
+### 🚀 Spatial Entity Node Types, Affordances & Cross-Pentad Synergy
+- **Spatial Entity Node Type**: Added first-class `spatial_entity` node type to the state graph schema with properties for 3D coordinates (`x`, `y`, `z`), orientation, bounding box, affordance bitmask, and confidence.
+- **Typed Spatial Edges**: Added `occupies_region`, `spatial_target_of`, and `affords` edge types with strict validation.
+- **Affordance Bitmask Specification**: Added formal bitmask definitions (`TRAVERSABLE: 1`, `OCCLUDER: 2`, `CONTAINER: 4`, `INTERACTABLE: 8`, `THREAT: 16`) for zero-overhead obstacle and interaction classification.
+- **Cross-Pentad Trajectory Unification**: Enhanced `manage_data(action: 'export_joint_trajectories')` with spatial anchor metadata linking spatial entities, visual snapshots, and decision records.
+- **Maintenance & Manifest Sync**: Synchronized manifests, bumped version to 1.4.0, and updated tool definitions.
+
 ## [1.3.1] - 2026-09-28
 
 ### 🛠️ Glama TDQS Optimizations & MCP Annotations

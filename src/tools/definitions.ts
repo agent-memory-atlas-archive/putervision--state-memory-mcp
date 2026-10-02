@@ -24,6 +24,7 @@ export const READ_ONLY_ACTIONS = new Set([
   'manage_data:export_trajectories',
   'manage_data:export_joint_trajectories',
   'manage_data:export_synergy_metrics',
+  'manage_data:from_tick',
   'query_graph:subgraph',
   'query_graph:trace',
   'query_graph:raw',
@@ -481,7 +482,7 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_data',
     description:
-      'Export and import graph structures, issue tracker items, fine-tuning trajectories, and multimodal synergy metrics (actions: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, import_graph, import_issues, import_spec). Use manage_data instead of query_graph when bulk-transferring graph data or generating AI training datasets.\n\nReturns serialized graph payload, trajectory dataset, synergy metrics, or import statistics.',
+      'Export and import graph structures, issue tracker items, fine-tuning trajectories, and multimodal synergy metrics (actions: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, from_tick, import_graph, import_issues, import_spec). Use manage_data instead of query_graph when bulk-transferring graph data or generating AI training datasets.\n\nReturns serialized graph payload, trajectory dataset, synergy metrics, or import statistics.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -493,12 +494,13 @@ export const toolDefinitions: ToolDefinition[] = [
             'export_trajectories',
             'export_joint_trajectories',
             'export_synergy_metrics',
+            'from_tick',
             'import_graph',
             'import_issues',
             'import_spec',
           ],
           description:
-            'The data export or import action to execute: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, import_graph, import_issues, import_spec.',
+            'The data export or import action to execute: export_graph, export_issues, export_trajectories, export_joint_trajectories, export_synergy_metrics, from_tick, import_graph, import_issues, import_spec.',
         },
         format: {
           type: 'string',

@@ -169,7 +169,14 @@ export function leaseBlackboard(params: {
   agent_id: string;
   duration_seconds?: number;
   mode?: 'acquire' | 'release';
-}): { success: boolean; message: string; expires_at?: string } {
+  intention_id?: string;
+}): {
+  success: boolean;
+  message: string;
+  expires_at?: string;
+  lease_denied?: boolean;
+  holder?: string;
+} {
   const projectSlug = getProjectSlug(params.project);
   const db = getDb(projectSlug);
   const resource = params.resource_id || params.topic;
@@ -185,9 +192,18 @@ export function leaseBlackboard(params: {
   const mode = params.mode || 'acquire';
 
   if (mode === 'release') {
-    const res = db
-      .prepare('DELETE FROM blackboard WHERE project = ? AND topic = ? AND agent_id = ?')
-      .run(projectSlug, leaseTopic, params.agent_id);
+    let sql = 'DELETE FROM blackboard WHERE project = ? AND topic = ?';
+    const sqlParams: any[] = [projectSlug, leaseTopic];
+
+    if (params.intention_id) {
+      sql += " AND (agent_id = ? OR json_extract(content, '$.intention_id') = ?)";
+      sqlParams.push(params.agent_id, params.intention_id);
+    } else {
+      sql += ' AND agent_id = ?';
+      sqlParams.push(params.agent_id);
+    }
+
+    const res = db.prepare(sql).run(...sqlParams);
     return {
       success: res.changes > 0,
       message:
@@ -216,6 +232,8 @@ export function leaseBlackboard(params: {
   if (existing && existing.agent_id !== params.agent_id) {
     return {
       success: false,
+      lease_denied: true,
+      holder: existing.agent_id,
       message: `Resource "${resource}" is currently leased by agent "${existing.agent_id}" until ${existing.expires_at}.`,
       expires_at: existing.expires_at || undefined,
     };
@@ -225,19 +243,32 @@ export function leaseBlackboard(params: {
   db.prepare('DELETE FROM blackboard WHERE project = ? AND topic = ?').run(projectSlug, leaseTopic);
 
   const id = generateId();
-  db.prepare(
-    `INSERT INTO blackboard (id, project, agent_id, agent_role, topic, content, created_at, expires_at)
+  const leaseContent = JSON.stringify({
+    resource,
+    intention_id: params.intention_id || undefined,
+    status: 'leased',
+    leased_by: params.agent_id,
+  });
+
+  const info = db
+    .prepare(
+      `INSERT OR IGNORE INTO blackboard (id, project, agent_id, agent_role, topic, content, created_at, expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id,
-    projectSlug,
-    params.agent_id,
-    'coordinator',
-    leaseTopic,
-    JSON.stringify({ resource, status: 'leased', leased_by: params.agent_id }),
-    now,
-    expiresAt
-  );
+    )
+    .run(id, projectSlug, params.agent_id, 'coordinator', leaseTopic, leaseContent, now, expiresAt);
+
+  if (info.changes === 0) {
+    const currentHolder = db
+      .prepare('SELECT agent_id, expires_at FROM blackboard WHERE project = ? AND topic = ?')
+      .get(projectSlug, leaseTopic) as any;
+    return {
+      success: false,
+      lease_denied: true,
+      holder: currentHolder?.agent_id || 'unknown',
+      message: `Resource "${resource}" could not be acquired due to concurrent lease.`,
+      expires_at: currentHolder?.expires_at,
+    };
+  }
 
   return {
     success: true,
