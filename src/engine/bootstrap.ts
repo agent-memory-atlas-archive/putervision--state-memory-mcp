@@ -30,9 +30,15 @@ export function bootstrapSession(params: BootstrapSessionParams) {
     session_id,
     session_reused: !!session_reused,
     task_slice,
-    spatial_slice_handle: task_slice?.spatial_entity_id ? `spatial:${task_slice.spatial_entity_id}` : undefined,
-    visual_slice_handle: task_slice?.visual_state_id ? `visual:${task_slice.visual_state_id}` : undefined,
-    active_intention: task_slice?.active_intention_id ? { id: task_slice.active_intention_id } : undefined,
+    spatial_slice_handle: task_slice?.spatial_entity_id
+      ? `spatial:${task_slice.spatial_entity_id}`
+      : undefined,
+    visual_slice_handle: task_slice?.visual_state_id
+      ? `visual:${task_slice.visual_state_id}`
+      : undefined,
+    active_intention: task_slice?.active_intention_id
+      ? { id: task_slice.active_intention_id }
+      : undefined,
     context_snapshot,
     next_tasks: next_tasks_res.tasks,
     summary: next_tasks_res.summary,

@@ -606,11 +606,13 @@ export class QueryEngine {
       if (blocker_class === 'unclassified') {
         const lower = (r.title || '').toLowerCase();
         if (lower.includes('spatial') || lower.includes('stale')) blocker_class = 'spatial_stale';
-        else if (lower.includes('visual') || lower.includes('mismatch')) blocker_class = 'visual_mismatch';
+        else if (lower.includes('visual') || lower.includes('mismatch'))
+          blocker_class = 'visual_mismatch';
         else if (lower.includes('lost') || lower.includes('entity')) blocker_class = 'entity_lost';
         else if (lower.includes('clearance')) blocker_class = 'clearance_violation';
         else if (lower.includes('stuck')) blocker_class = 'stuck_leaf';
-        else if (lower.includes('hmac') || lower.includes('expiring')) blocker_class = 'hmac_expiring';
+        else if (lower.includes('hmac') || lower.includes('expiring'))
+          blocker_class = 'hmac_expiring';
         else if (lower.includes('abstain')) blocker_class = 'abstain';
       }
 
@@ -630,10 +632,10 @@ export class QueryEngine {
              AND type IN ('link_spatial', 'link_intention', 'renders_state', 'link_behavior')`
         )
         .all(projectSlug, activeTask.id, activeTask.id) as Array<{
-          type: string;
-          target_id: string;
-          properties?: string;
-        }>;
+        type: string;
+        target_id: string;
+        properties?: string;
+      }>;
 
       for (const edge of crossEdges) {
         if (edge.type === 'link_spatial') {
@@ -655,8 +657,7 @@ export class QueryEngine {
           "SELECT agent_id FROM blackboard WHERE project = ? AND topic LIKE 'lease:%' AND (topic LIKE ? OR content LIKE ?) LIMIT 1"
         )
         .get(projectSlug, `%${searchPattern}%`, `%${searchPattern}%`) as
-        | { agent_id: string }
-        | undefined;
+        { agent_id: string } | undefined;
       if (leaseRow) lease_holder = leaseRow.agent_id;
     }
 

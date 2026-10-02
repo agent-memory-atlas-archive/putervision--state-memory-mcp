@@ -196,7 +196,7 @@ export function leaseBlackboard(params: {
     const sqlParams: any[] = [projectSlug, leaseTopic];
 
     if (params.intention_id) {
-      sql += ' AND (agent_id = ? OR json_extract(content, \'$.intention_id\') = ?)';
+      sql += " AND (agent_id = ? OR json_extract(content, '$.intention_id') = ?)";
       sqlParams.push(params.agent_id, params.intention_id);
     } else {
       sql += ' AND agent_id = ?';
@@ -250,19 +250,12 @@ export function leaseBlackboard(params: {
     leased_by: params.agent_id,
   });
 
-  const info = db.prepare(
-    `INSERT OR IGNORE INTO blackboard (id, project, agent_id, agent_role, topic, content, created_at, expires_at)
+  const info = db
+    .prepare(
+      `INSERT OR IGNORE INTO blackboard (id, project, agent_id, agent_role, topic, content, created_at, expires_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    id,
-    projectSlug,
-    params.agent_id,
-    'coordinator',
-    leaseTopic,
-    leaseContent,
-    now,
-    expiresAt
-  );
+    )
+    .run(id, projectSlug, params.agent_id, 'coordinator', leaseTopic, leaseContent, now, expiresAt);
 
   if (info.changes === 0) {
     const currentHolder = db
