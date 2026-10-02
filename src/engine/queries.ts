@@ -9,6 +9,8 @@ import {
   EdgeRow,
   NodeField,
   TaskSlice,
+  BlockerClass,
+  TaskBlocker,
 } from '../schema/types.js';
 import { parseNodeRow, parseEdgeRow } from './row-mappers.js';
 import { getCurrentBranch } from '../utils/git.js';
@@ -499,16 +501,40 @@ export class QueryEngine {
   /**
    * Fast compact TaskSlice query for System One fast decision layer.
    */
-  static getTaskSlice(params: { project?: string }): TaskSlice {
-    const projectSlug = getProjectSlug(params.project);
-    const db = getDb(projectSlug);
+  static getTaskSlice(
+    arg1?: Database.Database | { project?: string; task_id?: string },
+    arg2?: string,
+    arg3?: string
+  ): TaskSlice {
+    let db: Database.Database;
+    let projectSlug: string;
+    let explicitTaskId: string | undefined;
 
-    // 1. Active task (in_progress)
-    const activeTaskRow = db
-      .prepare(
-        "SELECT * FROM nodes WHERE project = ? AND type = 'task' AND status = 'in_progress' ORDER BY updated_at DESC LIMIT 1"
-      )
-      .get(projectSlug) as NodeRow | undefined;
+    if (arg1 && typeof (arg1 as any).prepare === 'function') {
+      db = arg1 as Database.Database;
+      projectSlug = getProjectSlug(arg2);
+      explicitTaskId = arg3;
+    } else {
+      const params = (arg1 as { project?: string; task_id?: string }) || {};
+      projectSlug = getProjectSlug(params.project);
+      db = getDb(projectSlug);
+      explicitTaskId = params.task_id;
+    }
+
+    // 1. Active task (explicit task_id or most recent in_progress)
+    let activeTaskRow: NodeRow | undefined;
+    if (explicitTaskId) {
+      activeTaskRow = db
+        .prepare('SELECT * FROM nodes WHERE project = ? AND id = ?')
+        .get(projectSlug, explicitTaskId) as NodeRow | undefined;
+    }
+    if (!activeTaskRow) {
+      activeTaskRow = db
+        .prepare(
+          "SELECT * FROM nodes WHERE project = ? AND type = 'task' AND status = 'in_progress' ORDER BY updated_at DESC LIMIT 1"
+        )
+        .get(projectSlug) as NodeRow | undefined;
+    }
     const activeTask = activeTaskRow ? parseNodeRow(activeTaskRow) : undefined;
 
     let active_task_id = activeTask?.id;
@@ -557,24 +583,84 @@ export class QueryEngine {
       .get(projectSlug) as { count: number } | undefined;
     const pending_tasks_count = pendingRow ? pendingRow.count : 0;
 
-    // 3. Active blockers
+    // 3. Active blockers (typed BlockerClass)
     const blockerRows = db
       .prepare(
         "SELECT id, title, metadata FROM nodes WHERE project = ? AND type = 'blocker' AND status = 'active' LIMIT 10"
       )
       .all(projectSlug) as NodeRow[];
-    const blockers = blockerRows.map((r) => {
-      let desc = r.title;
+    const blockers: TaskBlocker[] = blockerRows.map((r) => {
+      let desc: string | undefined = undefined;
+      let blocker_class: BlockerClass = 'unclassified';
+      let ref_id: string | undefined = undefined;
+
       if (r.metadata) {
         try {
           const parsed = JSON.parse(r.metadata);
+          if (parsed.blocker_class) blocker_class = parsed.blocker_class;
+          if (parsed.ref_id) ref_id = parsed.ref_id;
           if (parsed.description) desc = parsed.description;
         } catch {}
       }
-      return { id: r.id, description: desc };
+
+      if (blocker_class === 'unclassified') {
+        const lower = (r.title || '').toLowerCase();
+        if (lower.includes('spatial') || lower.includes('stale')) blocker_class = 'spatial_stale';
+        else if (lower.includes('visual') || lower.includes('mismatch')) blocker_class = 'visual_mismatch';
+        else if (lower.includes('lost') || lower.includes('entity')) blocker_class = 'entity_lost';
+        else if (lower.includes('clearance')) blocker_class = 'clearance_violation';
+        else if (lower.includes('stuck')) blocker_class = 'stuck_leaf';
+        else if (lower.includes('hmac') || lower.includes('expiring')) blocker_class = 'hmac_expiring';
+        else if (lower.includes('abstain')) blocker_class = 'abstain';
+      }
+
+      return { id: r.id, blocker_class, ref_id, description: desc };
     });
 
-    // 4. Recent decision IDs (last 5)
+    // 4. Cross-server edges connected to active task
+    let spatial_entity_id: string | undefined = undefined;
+    let active_intention_id: string | undefined = undefined;
+    let visual_state_id: string | undefined = undefined;
+
+    if (activeTask) {
+      const crossEdges = db
+        .prepare(
+          `SELECT type, target_id, properties FROM edges
+           WHERE project = ? AND (source_id = ? OR target_id = ?)
+             AND type IN ('link_spatial', 'link_intention', 'renders_state', 'link_behavior')`
+        )
+        .all(projectSlug, activeTask.id, activeTask.id) as Array<{
+          type: string;
+          target_id: string;
+          properties?: string;
+        }>;
+
+      for (const edge of crossEdges) {
+        if (edge.type === 'link_spatial') {
+          spatial_entity_id = edge.target_id;
+        } else if (edge.type === 'link_intention') {
+          active_intention_id = edge.target_id;
+        } else if (edge.type === 'renders_state') {
+          visual_state_id = edge.target_id;
+        }
+      }
+    }
+
+    // 5. Active blackboard lease holder
+    let lease_holder: string | undefined = undefined;
+    if (active_intention_id || spatial_entity_id) {
+      const searchPattern = active_intention_id || spatial_entity_id;
+      const leaseRow = db
+        .prepare(
+          "SELECT agent_id FROM blackboard WHERE project = ? AND topic LIKE 'lease:%' AND (topic LIKE ? OR content LIKE ?) LIMIT 1"
+        )
+        .get(projectSlug, `%${searchPattern}%`, `%${searchPattern}%`) as
+        | { agent_id: string }
+        | undefined;
+      if (leaseRow) lease_holder = leaseRow.agent_id;
+    }
+
+    // 6. Recent decision IDs (last 5)
     const decisionRows = db
       .prepare(
         "SELECT id FROM nodes WHERE project = ? AND type = 'decision' ORDER BY created_at DESC LIMIT 5"
@@ -582,7 +668,7 @@ export class QueryEngine {
       .all(projectSlug) as Array<{ id: string }>;
     const recent_decision_ids = decisionRows.map((r) => r.id);
 
-    // 5. task_graph_hash = Merkle root or SHA-256 of active tasks/edges
+    // 7. task_graph_hash = Merkle root or SHA-256 of active tasks/edges
     const activeNodes = db
       .prepare(
         "SELECT id, status, version FROM nodes WHERE project = ? AND status NOT IN ('cancelled', 'archived') ORDER BY id ASC"
@@ -598,14 +684,29 @@ export class QueryEngine {
       .update(canonicalJsonStringify(summary))
       .digest('hex');
 
+    // Feature density: non-blocked ratio
+    const totalCount = activeNodes.length;
+    const feature_density =
+      totalCount > 0
+        ? Number(Math.max(0, 1.0 - blockers.length / Math.max(1, totalCount)).toFixed(2))
+        : 1.0;
+
     return {
       active_task_id,
+      task_id: active_task_id,
+      status: activeTask?.status,
       active_task_title,
       milestone_title,
       pending_tasks_count,
       blockers,
+      blocker_class: blockers[0]?.blocker_class,
       recent_decision_ids,
       task_graph_hash,
+      active_intention_id,
+      spatial_entity_id,
+      visual_state_id,
+      feature_density,
+      lease_holder,
     };
   }
 }

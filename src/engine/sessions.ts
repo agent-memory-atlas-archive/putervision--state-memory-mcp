@@ -23,8 +23,9 @@ export class SessionEngine {
       agent_id?: string;
       agent_role?: string;
       metadata?: Record<string, unknown>;
+      reuse_existing?: boolean;
     }
-  ): { session_id: string } {
+  ): { session_id: string; session_reused?: boolean } {
     if (!params.agent_id) {
       logger.warn(`agent_id is missing in startSession, defaulting to 'unknown'`);
     }
@@ -52,6 +53,20 @@ export class SessionEngine {
       logger.warn(`Failed to clean up stale sessions: ${err.message}`);
     }
 
+    // If reuse_existing is not false, check for active session for this agent
+    if (params.agent_id && params.agent_id !== 'unknown' && params.reuse_existing !== false) {
+      const existing = db
+        .prepare(
+          'SELECT id FROM sessions WHERE project = ? AND agent_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1'
+        )
+        .get(params.project, params.agent_id) as { id: string } | undefined;
+
+      if (existing) {
+        logger.info(`Reusing active session ${existing.id} for agent ${params.agent_id}`);
+        return { session_id: existing.id, session_reused: true };
+      }
+    }
+
     const id = generateId();
     const started_at = getCurrentIsoString();
     const agent_id = params.agent_id || 'unknown';
@@ -65,7 +80,7 @@ export class SessionEngine {
     `
     ).run(id, agent_id, params.project, started_at, metadataStr);
 
-    return { session_id: id };
+    return { session_id: id, session_reused: false };
   }
 
   /**

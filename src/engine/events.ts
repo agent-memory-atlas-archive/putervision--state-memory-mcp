@@ -555,4 +555,67 @@ export class EventEngine {
       return { valid: false, total_events: 0, message: `Verification failed: ${err.message}` };
     }
   }
+
+  /**
+   * Ingest a batch of off-tick outcomes from behavior execution and index by pack_hash
+   */
+  static ingestFromTick(
+    db: Database.Database,
+    params: {
+      project: string;
+      session_id?: string;
+      batch: Array<{
+        task_id?: string;
+        leaf?: string;
+        status?: string;
+        result?: any;
+        pack_hash?: string;
+        token_id?: string;
+        error?: string;
+        timestamp?: string;
+      }>;
+    }
+  ): { success: boolean; ingested_count: number; pack_hashes: string[] } {
+    const packHashes: string[] = [];
+    const runBatch = db.transaction(() => {
+      for (const item of params.batch) {
+        const entityId = item.task_id || item.leaf || generateId();
+        const packHash = item.pack_hash || '';
+        if (packHash) packHashes.push(packHash);
+
+        EventEngine.logEvent(db, {
+          session_id: params.session_id,
+          project: params.project,
+          event_type: 'fast_decision',
+          entity_type: 'decision',
+          entity_id: entityId,
+          after_state: item.result ?? item.status ?? 'completed',
+          metadata: {
+            source: 'behavior_tick',
+            leaf: item.leaf,
+            status: item.status,
+            pack_hash: item.pack_hash,
+            token_id: item.token_id,
+            error: item.error,
+            timestamp: item.timestamp,
+          },
+        });
+      }
+    });
+
+    runBatch();
+
+    // Ensure pack_hash index exists on events
+    try {
+      db.prepare(
+        "CREATE INDEX IF NOT EXISTS idx_events_pack_hash ON events(json_extract(metadata, '$.pack_hash'))"
+      ).run();
+    } catch {}
+
+    return {
+      success: true,
+      ingested_count: params.batch.length,
+      pack_hashes: Array.from(new Set(packHashes)),
+    };
+  }
 }

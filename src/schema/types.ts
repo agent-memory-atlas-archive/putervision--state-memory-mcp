@@ -98,7 +98,27 @@ export type EdgeType =
   | 'drifts_from'
   | 'visualizes_spec'
   | 'blocked_by_visual_state'
-  | 'verifies_visual_state';
+  | 'verifies_visual_state'
+  | 'link_spatial'
+  | 'link_intention'
+  | 'link_behavior';
+
+export type BlockerClass =
+  | 'spatial_stale'
+  | 'visual_mismatch'
+  | 'entity_lost'
+  | 'clearance_violation'
+  | 'stuck_leaf'
+  | 'hmac_expiring'
+  | 'abstain'
+  | 'unclassified';
+
+export interface TaskBlocker {
+  id: string;
+  blocker_class?: BlockerClass;
+  ref_id?: string;
+  description?: string;
+}
 
 export interface Edge {
   id: string; // ULID
@@ -225,13 +245,18 @@ export interface BatchAddEdgesParams {
 
 export interface TaskSlice {
   active_task_id?: string;
+  task_id?: string;
+  status?: string;
   active_task_title?: string;
   milestone_title?: string;
   pending_tasks_count: number;
-  blockers: Array<{
-    id: string;
-    description: string;
-  }>;
+  blockers: TaskBlocker[];
+  blocker_class?: BlockerClass;
   recent_decision_ids: string[];
   task_graph_hash: string; // Merkle root of active task DAG
+  active_intention_id?: string;
+  spatial_entity_id?: string;
+  visual_state_id?: string;
+  feature_density?: number;
+  lease_holder?: string;
 }

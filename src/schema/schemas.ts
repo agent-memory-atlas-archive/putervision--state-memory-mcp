@@ -501,6 +501,20 @@ export const EdgeTypeSchema = z.enum([
   'visualizes_spec',
   'blocked_by_visual_state',
   'verifies_visual_state',
+  'link_spatial',
+  'link_intention',
+  'link_behavior',
+]);
+
+export const BlockerClassSchema = z.enum([
+  'spatial_stale',
+  'visual_mismatch',
+  'entity_lost',
+  'clearance_violation',
+  'stuck_leaf',
+  'hmac_expiring',
+  'abstain',
+  'unclassified',
 ]);
 
 export const AddEdgeSchema = z.object({
@@ -877,6 +891,8 @@ export const ExportSpecSchema = z.object({
 
 export const GetSpecComplianceSchema = z.object({
   project: z.string().optional(),
+  visual_spec_hash: z.string().optional(),
+  spatial_proof_hash: z.string().optional(),
 });
 
 export const ScaffoldSpecSchema = z.object({
@@ -949,6 +965,40 @@ export const LeaseBlackboardSchema = z.object({
   agent_id: z.string().min(1, 'agent_id is required'),
   duration_seconds: z.number().optional(),
   mode: z.enum(['acquire', 'release']).optional(),
+  intention_id: z.string().optional(),
+});
+
+export const FromTickDataSchema = z.object({
+  project: z.string().optional(),
+  session_id: z.string().optional(),
+  batch: z
+    .array(
+      z.object({
+        task_id: z.string().optional(),
+        leaf: z.string().optional(),
+        status: z.string().optional(),
+        result: z.unknown().optional(),
+        pack_hash: z.string().optional(),
+        token_id: z.string().optional(),
+        error: z.string().optional(),
+        timestamp: z.string().optional(),
+      })
+    )
+    .optional(),
+  outcomes: z
+    .array(
+      z.object({
+        task_id: z.string().optional(),
+        leaf: z.string().optional(),
+        status: z.string().optional(),
+        result: z.unknown().optional(),
+        pack_hash: z.string().optional(),
+        token_id: z.string().optional(),
+        error: z.string().optional(),
+        timestamp: z.string().optional(),
+      })
+    )
+    .optional(),
 });
 
 export const ListBlackboardSchema = z.object({

@@ -16,6 +16,8 @@ export interface SpecComplianceReport {
   coverage_percentage: number;
   verification_percentage: number;
   is_compliant: boolean;
+  visual_spec_verified?: boolean;
+  spatial_proof_verified?: boolean;
 }
 
 /**
@@ -23,7 +25,11 @@ export interface SpecComplianceReport {
  */
 export function calculateSpecCompliance(
   db: Database.Database,
-  project: string
+  project: string,
+  options?: {
+    visual_spec_hash?: string;
+    spatial_proof_hash?: string;
+  }
 ): SpecComplianceReport {
   const specRows = db
     .prepare("SELECT id, title FROM nodes WHERE project = ? AND type = 'spec'")
@@ -109,7 +115,67 @@ export function calculateSpecCompliance(
   const verificationPercentage =
     critTotal > 0 ? Math.round((verifiedCount / critTotal) * 100) : 100;
 
-  const isCompliant = unfulfilledReqs.length === 0 && unverifiedCrits.length === 0;
+  let visualSpecVerified: boolean | undefined;
+  if (options?.visual_spec_hash) {
+    const row = db
+      .prepare(
+        `SELECT 1 FROM nodes WHERE project = ? AND (
+          json_extract(metadata, '$.visual_spec_hash') = ? OR
+          json_extract(metadata, '$.pack_hash') = ? OR
+          json_extract(metadata, '$.hash') = ?
+        )
+        UNION
+        SELECT 1 FROM edges WHERE project = ? AND (
+          target_id = ? OR source_id = ? OR json_extract(properties, '$.visual_spec_hash') = ?
+        )
+        LIMIT 1`
+      )
+      .get(
+        project,
+        options.visual_spec_hash,
+        options.visual_spec_hash,
+        options.visual_spec_hash,
+        project,
+        options.visual_spec_hash,
+        options.visual_spec_hash,
+        options.visual_spec_hash
+      );
+    visualSpecVerified = !!row;
+  }
+
+  let spatialProofVerified: boolean | undefined;
+  if (options?.spatial_proof_hash) {
+    const row = db
+      .prepare(
+        `SELECT 1 FROM nodes WHERE project = ? AND (
+          json_extract(metadata, '$.spatial_proof_hash') = ? OR
+          json_extract(metadata, '$.proof_hash') = ? OR
+          json_extract(metadata, '$.pack_hash') = ?
+        )
+        UNION
+        SELECT 1 FROM edges WHERE project = ? AND (
+          target_id = ? OR source_id = ? OR json_extract(properties, '$.spatial_proof_hash') = ?
+        )
+        LIMIT 1`
+      )
+      .get(
+        project,
+        options.spatial_proof_hash,
+        options.spatial_proof_hash,
+        options.spatial_proof_hash,
+        project,
+        options.spatial_proof_hash,
+        options.spatial_proof_hash,
+        options.spatial_proof_hash
+      );
+    spatialProofVerified = !!row;
+  }
+
+  const isCompliant =
+    unfulfilledReqs.length === 0 &&
+    unverifiedCrits.length === 0 &&
+    (options?.visual_spec_hash ? !!visualSpecVerified : true) &&
+    (options?.spatial_proof_hash ? !!spatialProofVerified : true);
 
   return {
     project,
@@ -123,6 +189,8 @@ export function calculateSpecCompliance(
     coverage_percentage: coveragePercentage,
     verification_percentage: verificationPercentage,
     is_compliant: isCompliant,
+    visual_spec_verified: visualSpecVerified,
+    spatial_proof_verified: spatialProofVerified,
   };
 }
 

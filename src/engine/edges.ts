@@ -8,6 +8,7 @@ import { getCurrentBranch } from '../utils/git.js';
 import { logger } from '../utils/logger.js';
 import { EventEngine } from './events.js';
 import { parseEdgeRow } from './row-mappers.js';
+import { isExternalId, CROSS_SERVER_EDGE_TYPES } from './validate.js';
 
 /**
  * Cycle detection for dependency-like edges (depends_on, blocks, child_of).
@@ -110,15 +111,51 @@ export class EdgeEngine {
     const db = getDb(projectSlug);
 
     return db.transaction(() => {
-      // Verify source and target exist
+      // Verify source and target exist (allowing external ID endpoints and cross-server edges)
       const sourceExists = db.prepare('SELECT 1 FROM nodes WHERE id = ?').get(params.source_id);
       if (!sourceExists) {
-        throw new Error(`Source node not found: ${params.source_id}`);
+        if (isExternalId(params.source_id)) {
+          const nodeType = params.source_id.startsWith('vs_') ? 'visual_state' : 'observation';
+          db.prepare(
+            `INSERT OR IGNORE INTO nodes (id, project, type, title, status, metadata, tags, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(
+            params.source_id,
+            projectSlug,
+            nodeType,
+            params.source_id,
+            'active',
+            JSON.stringify({ external: true }),
+            '[]',
+            getCurrentIsoString(),
+            getCurrentIsoString()
+          );
+        } else {
+          throw new Error(`Source node not found: ${params.source_id}`);
+        }
       }
 
       const targetExists = db.prepare('SELECT 1 FROM nodes WHERE id = ?').get(params.target_id);
       if (!targetExists) {
-        throw new Error(`Target node not found: ${params.target_id}`);
+        if (isExternalId(params.target_id) || CROSS_SERVER_EDGE_TYPES.has(params.type)) {
+          const nodeType = params.target_id.startsWith('vs_') ? 'visual_state' : 'observation';
+          db.prepare(
+            `INSERT OR IGNORE INTO nodes (id, project, type, title, status, metadata, tags, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).run(
+            params.target_id,
+            projectSlug,
+            nodeType,
+            params.target_id,
+            'active',
+            JSON.stringify({ external: true }),
+            '[]',
+            getCurrentIsoString(),
+            getCurrentIsoString()
+          );
+        } else {
+          throw new Error(`Target node not found: ${params.target_id}`);
+        }
       }
 
       // Cycle detection for dependency-like edge types

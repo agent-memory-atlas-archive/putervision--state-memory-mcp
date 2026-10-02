@@ -331,6 +331,10 @@ export class GraphEngine {
       const row = db.prepare('SELECT rowid FROM nodes WHERE id = ?').get(params.id) as
         { rowid: number } | undefined;
 
+      db.prepare(`
+        DELETE FROM edges WHERE source_id = ? OR target_id = ?
+      `).run(params.id, params.id);
+
       const stmt = db.prepare(`
         DELETE FROM nodes WHERE id = ?
       `);
