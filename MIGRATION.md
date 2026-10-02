@@ -1,8 +1,50 @@
-# 🚀 Migration Guide: v0.10 → v1.0
+# 🚀 Migration Guide: @putervision/state-memory-mcp
 
-This guide explains how to migrate client integrations, custom agents, and tool callers from `state-memory-mcp` v0.10 to the consolidated **v1.0 API**.
+This guide explains how to migrate client integrations, custom agents, and tool callers across major and minor releases of `@putervision/state-memory-mcp`.
 
 ---
+
+## ⚡️ Migrating to v1.4.0+
+
+`v1.4.0` introduces first-class 3D spatial entity node representation, typed spatial graph edges, formal action affordance bitmasks, and unified multimodal trajectory exports.
+
+### 1. First-Class `spatial_entity` Node Type
+You can now track physical and virtual 3D spatial objects directly within the state graph:
+```json
+{
+  "type": "spatial_entity",
+  "title": "Interactive Control Terminal",
+  "metadata": {
+    "x": 12.5,
+    "y": 0.0,
+    "z": -4.2,
+    "bbox": { "min": [-0.5, 0, -0.5], "max": [0.5, 2.0, 0.5] },
+    "affordances": 8,
+    "confidence": 0.98
+  }
+}
+```
+
+### 2. Typed Spatial Edges & `manage_edges(action: "link_spatial")`
+New edge types allow direct topological and functional linking:
+- `occupies_region`: Links a `spatial_entity` to a boundary or region node.
+- `spatial_target_of`: Associates a `task` or `decision` with a target 3D entity.
+- `affords`: Associates a spatial entity with an executable action or ability.
+
+### 3. Action Affordance Bitmasks
+Standardized affordance bitmask constants:
+- `TRAVERSABLE`: `1` (1 << 0)
+- `OCCLUDER`: `2` (1 << 1)
+- `CONTAINER`: `4` (1 << 2)
+- `INTERACTABLE`: `8` (1 << 3)
+- `THREAT`: `16` (1 << 4)
+
+### 4. Cross-Pentad Trajectory Unification
+`manage_data(action: "export_joint_trajectories")` now exports coordinated multi-agent timelines linking spatial entities, visual snapshots (`vision-memory-mcp`), and state task progress.
+
+---
+
+## ⚡️ Migrating: v0.10 → v1.0
 
 ## Overview of Changes
 
