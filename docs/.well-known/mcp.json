@@ -10,7 +10,7 @@
       "id": "state-memory-mcp",
       "name": "State Memory MCP",
       "package": "@putervision/state-memory-mcp",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "command": "npx",
       "args": [
         "-y",
