@@ -298,7 +298,9 @@ describe('Exhaustive Advisor & Self-Healing Action Resolver Suite', () => {
 
     // version
     const { VERSION } = await import('../../src/utils/version.js');
-    expect(VERSION).toBe('1.4.0');
+    const { readFileSync } = await import('node:fs');
+    const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+    expect(VERSION).toBe(pkg.version);
 
     // logger
     const { logger } = await import('../../src/utils/logger.js');

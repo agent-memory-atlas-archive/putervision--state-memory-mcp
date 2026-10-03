@@ -45,3 +45,15 @@ export function redactData<T>(data: T): T {
   }
   return data;
 }
+
+export function redactUrl(urlStr: string): string {
+  if (!urlStr) return urlStr;
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.username) parsed.username = '[REDACTED]';
+    if (parsed.password) parsed.password = '[REDACTED]';
+    return parsed.toString();
+  } catch {
+    return redactText(urlStr);
+  }
+}

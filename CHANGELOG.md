@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.4.1] - 2026-10-03
+
+### 🔒 Security, Metadata Redaction & Validation Hardening
+- **Path Validation Hardening**: Enforced root boundary checks and prevented unauthorized directory traversals in workspace allowlist validation.
+- **Notification URL Redaction**: Added credential and query parameter masking (`redactUrl`) for webhook notifications and logger error dispatches.
+- **Git Scanner Metadata Sanitization**: Gated author email storage behind explicit opt-in (`STORE_AUTHOR_EMAIL=true`) and applied metadata redaction to commit summaries.
+- **Release Metadata Sync**: Synchronized version manifests, documentation, and migration references across 1.4.1 release targets.
+
 ## [1.4.0] - 2026-10-02
 
 ### 🚀 Spatial Entity Node Types, Affordances & Cross-Pentad Synergy

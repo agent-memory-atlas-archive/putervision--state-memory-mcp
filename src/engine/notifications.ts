@@ -3,6 +3,7 @@ import * as http from 'node:http';
 import * as https from 'node:https';
 import * as dns from 'node:dns/promises';
 import { logger } from '../utils/logger.js';
+import { redactUrl } from '../utils/redact.js';
 import { VERSION } from '../utils/version.js';
 
 export interface ContextChangeEvent {
@@ -144,7 +145,7 @@ class ContextStoreNotifier extends EventEmitter {
 
     const safeIp = await validateWebhookHostDns(webhookUrl);
     if (!safeIp) {
-      logger.warn(`Rejected unsafe or unverified webhook URL: ${webhookUrl}`);
+      logger.warn(`Rejected unsafe or unverified webhook URL: ${redactUrl(webhookUrl)}`);
       return;
     }
 
@@ -200,9 +201,11 @@ class ContextStoreNotifier extends EventEmitter {
       req.on('error', (err) => {
         clearTimeout(timer);
         if (err.name === 'AbortError') {
-          logger.warn(`Webhook HTTP POST timed out after ${timeoutMs}ms to ${webhookUrl}`);
+          logger.warn(
+            `Webhook HTTP POST timed out after ${timeoutMs}ms to ${redactUrl(webhookUrl)}`
+          );
         } else {
-          logger.warn(`Webhook HTTP POST failed to ${webhookUrl}: ${err.message}`);
+          logger.warn(`Webhook HTTP POST failed to ${redactUrl(webhookUrl)}: ${err.message}`);
         }
       });
 

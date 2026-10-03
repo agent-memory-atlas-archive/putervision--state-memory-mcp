@@ -4,9 +4,9 @@ This guide explains how to migrate client integrations, custom agents, and tool 
 
 ---
 
-## ⚡️ Migrating to v1.4.0+
+## ⚡️ Migrating to v1.4.1+
 
-`v1.4.0` introduces first-class 3D spatial entity node representation, typed spatial graph edges, formal action affordance bitmasks, and unified multimodal trajectory exports.
+`v1.4.1` introduces first-class 3D spatial entity node representation, typed spatial graph edges, formal action affordance bitmasks, and unified multimodal trajectory exports.
 
 ### 1. First-Class `spatial_entity` Node Type
 You can now track physical and virtual 3D spatial objects directly within the state graph:

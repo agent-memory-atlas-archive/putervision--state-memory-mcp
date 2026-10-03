@@ -31,9 +31,14 @@ export function loadPathConfig(projectRoot: string): PathValidationConfig {
       const raw = fs.readFileSync(configPath, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.allowedExportDirs)) {
+        const trustConfig = process.env.STATE_MEMORY_TRUST_PROJECT_CONFIG === 'true';
         for (const dir of parsed.allowedExportDirs) {
           if (typeof dir === 'string') {
-            allowedDirs.push(path.resolve(dir));
+            const resolved = path.resolve(dir);
+            if (resolved === path.parse(resolved).root && !trustConfig) {
+              continue;
+            }
+            allowedDirs.push(resolved);
           }
         }
       }

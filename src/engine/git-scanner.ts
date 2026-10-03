@@ -7,6 +7,7 @@ import { getCommitLog, getFilesChanged, findGitRepos } from '../utils/git.js';
 import { GraphEngine } from './graph.js';
 import { EdgeEngine } from './edges.js';
 import { logger } from '../utils/logger.js';
+import { redactText } from '../utils/redact.js';
 
 /**
  * Determines whether a new task should be created for a given commit based on commit content and chronological position.
@@ -379,9 +380,11 @@ export async function scanGit(
             commit_hash: commit.hash,
             commit_short: commit.shortHash,
             author: commit.author,
-            author_email: commit.authorEmail,
+            ...(process.env.STORE_AUTHOR_EMAIL === 'true'
+              ? { author_email: commit.authorEmail }
+              : {}),
             committed_at: commit.committedAt,
-            message: commit.message,
+            message: redactText(commit.message),
             files_changed: commit.filesChanged,
             repo_path: relPath,
           },
